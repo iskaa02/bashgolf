@@ -29,8 +29,8 @@ type App struct {
 	width, height int
 }
 
-// NewApp starts on the named screen ("keycheck", "sandbox", "killring") or
-// the menu.
+// NewApp starts on the named screen ("keycheck", "sandbox", "killring",
+// "casefix", "dash") or the menu.
 func NewApp(start string) App {
 	a := App{prog: game.NewProgress()}
 	switch start {
@@ -40,6 +40,10 @@ func NewApp(start string) App {
 		a.screen = newSandbox()
 	case "killring":
 		a.screen = newLevelSelect(killRingPack, a.prog, 0)
+	case "casefix":
+		a.screen = newLevelSelect(caseFixPack, a.prog, 0)
+	case "dash":
+		a.screen = newDash(a.prog)
 	default:
 		a.screen = newMenu(a.prog)
 	}

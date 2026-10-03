@@ -82,6 +82,16 @@ var actionNames = map[Action]string{
 
 func (a Action) String() string { return actionNames[a] }
 
+// IsMovement reports whether a only moves the cursor.
+func (a Action) IsMovement() bool {
+	switch a {
+	case ActBeginningOfLine, ActEndOfLine, ActForwardChar, ActBackwardChar,
+		ActForwardWord, ActBackwardWord, ActExchangePointAndMark:
+		return true
+	}
+	return false
+}
+
 func isKill(a Action) bool {
 	switch a {
 	case ActUnixLineDiscard, ActKillLine, ActUnixWordRubout, ActKillWord, ActBackwardKillWord:

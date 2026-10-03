@@ -11,7 +11,7 @@ import (
 	"termgame/internal/readline"
 )
 
-var packIDs = []string{"killring"}
+var packIDs = []string{"killring", "casefix"}
 
 func forEachLevel(t *testing.T, fn func(t *testing.T, p *Pack, i int, l Level)) {
 	for _, id := range packIDs {

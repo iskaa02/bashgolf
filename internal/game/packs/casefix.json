@@ -1,0 +1,112 @@
+{
+  "id": "casefix",
+  "title": "Case Fixer",
+  "desc": "Caps Lock accidents and fat-finger typos. Fix the case and swap the letters back.",
+  "known": ["ctrl+a", "ctrl+e", "alt+f", "alt+b"],
+  "levels": [
+    {
+      "id": "shout",
+      "title": "Stop shouting",
+      "start": "‸ECHO hello",
+      "target": "echo hello",
+      "new": ["alt+l"],
+      "tip": "Alt+L lowercases from the cursor to the end of the word, then leaves the cursor there.",
+      "par": 1,
+      "solution": ["alt+l"]
+    },
+    {
+      "id": "path",
+      "title": "Environment",
+      "start": "export ‸path=$HOME/bin",
+      "target": "export PATH=$HOME/bin",
+      "new": ["alt+u"],
+      "tip": "Alt+U uppercases to the end of the word. Words stop at punctuation, so '=' is safe.",
+      "par": 1,
+      "solution": ["alt+u"]
+    },
+    {
+      "id": "capslock",
+      "title": "Caps Lock was on",
+      "start": "‸SUDO APT INSTALL VIM",
+      "target": "sudo apt install vim",
+      "tip": "Each press handles one word and moves past it, so just keep pressing.",
+      "par": 4,
+      "solution": ["alt+l", "alt+l", "alt+l", "alt+l"]
+    },
+    {
+      "id": "message",
+      "title": "Proper message",
+      "start": "git commit -m \"fix login bug\"‸",
+      "target": "git commit -m \"Fix login bug\"",
+      "new": ["alt+c"],
+      "tip": "Alt+C capitalizes: first letter up, the rest down. Hop back to the word first.",
+      "par": 4,
+      "solution": ["alt+b", "alt+b", "alt+b", "alt+c"]
+    },
+    {
+      "id": "mixed",
+      "title": "Inverted",
+      "start": "‸eCHO $hOME",
+      "target": "echo $HOME",
+      "tip": "Mix and match: each word needs a different fix.",
+      "par": 2,
+      "solution": ["alt+l", "alt+u"]
+    },
+    {
+      "id": "sl",
+      "title": "Steam locomotive",
+      "start": "sl‸",
+      "target": "ls",
+      "new": ["ctrl+t"],
+      "tip": "Ctrl+T swaps the two characters before the cursor when you're at the end of the line.",
+      "par": 1,
+      "solution": ["ctrl+t"]
+    },
+    {
+      "id": "gti",
+      "title": "Classic typo",
+      "start": "cd .. && gti‸ pull",
+      "target": "cd .. && git pull",
+      "tip": "In the middle of a line, Ctrl+T swaps the character before the cursor with the one under it.",
+      "par": 2,
+      "solution": ["ctrl+b", "ctrl+t"]
+    },
+    {
+      "id": "stauts",
+      "title": "Stauts",
+      "start": "‸git stauts",
+      "target": "git status",
+      "tip": "Get the cursor between the two swapped letters, then Ctrl+T.",
+      "par": 4,
+      "solution": ["ctrl+e", "ctrl+b", "ctrl+b", "ctrl+t"]
+    },
+    {
+      "id": "args",
+      "title": "Backwards",
+      "start": "mv new old‸",
+      "target": "mv old new",
+      "new": ["alt+t"],
+      "tip": "Alt+T swaps the two words around the cursor. At the end of the line it swaps the last two.",
+      "par": 1,
+      "solution": ["alt+t"]
+    },
+    {
+      "id": "remote",
+      "title": "Remote first",
+      "start": "‸git push main origin",
+      "target": "git push origin main",
+      "tip": "Put the cursor between the two words (or after them) and Alt+T.",
+      "par": 2,
+      "solution": ["ctrl+e", "alt+t"]
+    },
+    {
+      "id": "finale",
+      "title": "Bad day",
+      "start": "‸GIT pUSH main ORIGIN",
+      "target": "git push origin main",
+      "tip": "Everything at once. Alt+T moves the cursor too, so plan the order.",
+      "par": 5,
+      "solution": ["alt+l", "alt+l", "alt+f", "alt+l", "alt+t"]
+    }
+  ]
+}

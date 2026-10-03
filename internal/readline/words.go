@@ -5,6 +5,15 @@ import (
 	"unicode"
 )
 
+// ForwardWord returns where Alt+F moves the cursor from p in text.
+func ForwardWord(text []rune, p int) int { return forwardWord(text, p) }
+
+// BackwardWord returns where Alt+B moves the cursor from p in text.
+func BackwardWord(text []rune, p int) int { return backwardWord(text, p) }
+
+// IsWordRune reports whether readline treats r as part of a word.
+func IsWordRune(r rune) bool { return isWordRune(r) }
+
 // isWordRune reports whether r is part of a word for Alt+F, Alt+B, Alt+D and
 // friends. Readline only counts letters and digits, so "my-file_name" is
 // three words to them. Ctrl+W is different: it splits on whitespace only.

@@ -37,10 +37,11 @@ type Level struct {
 
 // Pack is an ordered set of levels for one game mode.
 type Pack struct {
-	ID     string  `json:"id"`
-	Title  string  `json:"title"`
-	Desc   string  `json:"desc"`
-	Levels []Level `json:"levels"`
+	ID     string   `json:"id"`
+	Title  string   `json:"title"`
+	Desc   string   `json:"desc"`
+	Known  []string `json:"known"` // shortcuts taught by earlier packs
+	Levels []Level  `json:"levels"`
 }
 
 // LoadPack reads an embedded pack by id, e.g. "killring".
@@ -80,11 +81,16 @@ func (l Level) Editor() *readline.Editor {
 }
 
 // SolverKeys is what the par solver may press on level i: the base keys,
-// every shortcut taught so far in the pack, and, unless typing is
+// the pack's known keys, every shortcut taught so far in the pack, and, unless typing is
 // forbidden, a space plus any characters the target needs that neither the
 // start nor the kill ring can supply.
 func (p *Pack) SolverKeys(i int) []string {
 	keys := slices.Clone(baseKeys)
+	for _, k := range p.Known {
+		if !slices.Contains(keys, k) {
+			keys = append(keys, k)
+		}
+	}
 	for _, l := range p.Levels[:i+1] {
 		for _, k := range l.New {
 			if !slices.Contains(keys, k) {

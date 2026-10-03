@@ -4,6 +4,8 @@
 //	termgame keycheck   jump straight to the key check screen
 //	termgame sandbox    jump straight to the sandbox
 //	termgame killring   jump straight to Kill Ring Surgeon
+//	termgame casefix    jump straight to Case Fixer
+//	termgame dash       jump straight to Cursor Dash
 package main
 
 import (
