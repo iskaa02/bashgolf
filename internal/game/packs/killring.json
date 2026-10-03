@@ -1,0 +1,145 @@
+{
+  "id": "killring",
+  "title": "Kill Ring Surgeon",
+  "desc": "Fix broken commands by cutting and pasting. Typing works too, but every letter costs a key.",
+  "levels": [
+    {
+      "id": "tail",
+      "title": "Chop the tail",
+      "start": "ls -la‸ --color=always | less",
+      "target": "ls -la",
+      "new": ["ctrl+k"],
+      "tip": "The cursor is already in the right spot. One key does it. (Ctrl+C restarts a level if you slip.)",
+      "par": 1,
+      "solution": ["ctrl+k"]
+    },
+    {
+      "id": "head",
+      "title": "Lose the junk",
+      "start": "asdf;lkj ‸echo hello",
+      "target": "echo hello",
+      "new": ["ctrl+u"],
+      "tip": "The mirror image of Ctrl+K. Both put what they cut in the kill ring, shown below the line.",
+      "par": 1,
+      "solution": ["ctrl+u"]
+    },
+    {
+      "id": "hop-forward",
+      "title": "Hop forward",
+      "start": "‸grep error app.log extra junk",
+      "target": "grep error app.log",
+      "new": ["alt+f"],
+      "tip": "Alt+F jumps to the end of the next word. Hop to the right spot, then cut.",
+      "par": 5,
+      "solution": ["alt+f", "alt+f", "alt+f", "alt+f", "ctrl+k"]
+    },
+    {
+      "id": "hop-back",
+      "title": "Hop back",
+      "start": "cd /tmp && ls -la‸",
+      "target": "ls -la",
+      "new": ["alt+b"],
+      "tip": "Alt+B jumps back to the start of a word. Punctuation like '-' counts as a gap between words.",
+      "par": 3,
+      "solution": ["alt+b", "alt+b", "ctrl+u"]
+    },
+    {
+      "id": "words",
+      "title": "Word muncher",
+      "start": "rm -rf build dist node_modules‸",
+      "target": "rm -rf build",
+      "new": ["ctrl+w"],
+      "tip": "Ctrl+W cuts the word before the cursor. It only stops at spaces, so node_modules goes in one bite.",
+      "par": 3,
+      "solution": ["ctrl+w", "ctrl+w", "ctrl+h"]
+    },
+    {
+      "id": "stutter",
+      "title": "Stutter",
+      "start": "‸sudo sudo apt install htop",
+      "target": "sudo apt install htop",
+      "new": ["alt+d"],
+      "tip": "Alt+D cuts the word after the cursor, including the space in front of it.",
+      "par": 2,
+      "solution": ["alt+f", "alt+d"]
+    },
+    {
+      "id": "move-word",
+      "title": "Move a word",
+      "start": "install ‸apt htop",
+      "target": "apt install htop",
+      "new": ["ctrl+y"],
+      "tip": "Everything you cut lands in the kill ring. Ctrl+Y pastes it back wherever the cursor is.",
+      "par": 4,
+      "solution": ["ctrl+u", "alt+f", "ctrl+f", "ctrl+y"]
+    },
+    {
+      "id": "to-front",
+      "title": "Sudo, please",
+      "start": "apt update sudo‸",
+      "target": "sudo apt update",
+      "new": ["ctrl+a"],
+      "tip": "Ctrl+A jumps to the start of the line. Cut the last word, jump, paste, tidy the space.",
+      "par": 5,
+      "solution": ["ctrl+w", "ctrl+h", "ctrl+a", "ctrl+y", " "]
+    },
+    {
+      "id": "end-fix",
+      "title": "Too much force",
+      "start": "‸git push origin main --force",
+      "target": "git push origin main",
+      "new": ["ctrl+e"],
+      "tip": "Ctrl+E jumps to the end of the line, however far away it is.",
+      "par": 3,
+      "solution": ["ctrl+e", "ctrl+w", "ctrl+h"]
+    },
+    {
+      "id": "swap-args",
+      "title": "Wrong way round",
+      "start": "cp backup/ notes.txt‸",
+      "target": "cp notes.txt backup/",
+      "tip": "Sometimes it's cheaper to move the first argument than the last.",
+      "par": 5,
+      "solution": ["ctrl+w", "ctrl+h", "alt+b", "ctrl+y", " "]
+    },
+    {
+      "id": "merge",
+      "title": "One big bite",
+      "start": "--force git push origin‸ main",
+      "target": "git push origin --force main",
+      "tip": "Cuts made back to back join into one kill ring entry, so one Ctrl+Y brings them all back.",
+      "par": 6,
+      "solution": ["ctrl+f", "ctrl+w", "ctrl+w", "ctrl+w", "ctrl+a", "ctrl+y"]
+    },
+    {
+      "id": "old-cut",
+      "title": "Dig in the ring",
+      "start": "tail ‸",
+      "target": "tail /var/log/nginx/access.log",
+      "kills": ["/var/log/nginx/access.log", "-n 50"],
+      "new": ["alt+y"],
+      "tip": "The kill ring keeps your last ten cuts. Ctrl+Y pastes the newest; press Alt+Y right after to swap it for the one before.",
+      "par": 2,
+      "solution": ["ctrl+y", "alt+y"]
+    },
+    {
+      "id": "spin",
+      "title": "Spin the ring",
+      "start": "tail ‸",
+      "target": "tail -f -n 50 /var/log/syslog",
+      "kills": ["/var/log/syslog", "-n 50", "-f"],
+      "tip": "After Alt+Y, Ctrl+Y keeps pasting from where you stopped in the ring. Keep pressing Alt+Y to go further back.",
+      "par": 7,
+      "solution": ["ctrl+y", " ", "ctrl+y", "alt+y", " ", "ctrl+y", "alt+y"]
+    },
+    {
+      "id": "surgery",
+      "title": "Full surgery",
+      "start": "‸install -y apt sudo",
+      "target": "sudo apt install -y",
+      "tip": "Everything at once. Hint: a paste can carry a space along with a word.",
+      "par": 8,
+      "solution": ["alt+f", "alt+f", "ctrl+k", "ctrl+a", "ctrl+y", "ctrl+w", "ctrl+a", "ctrl+y"]
+    }
+  ]
+}
