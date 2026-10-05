@@ -84,3 +84,7 @@ tools/               bash oracle scripts and the demo recorder
 
 Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea) and
 [Lip Gloss](https://github.com/charmbracelet/lipgloss).
+
+## License
+
+[MIT](LICENSE)
