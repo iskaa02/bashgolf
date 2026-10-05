@@ -1,31 +1,32 @@
-# termgame
+# bashgolf
 
-An arcade game for learning the keyboard shortcuts of your shell's line editor.
+Keystroke golf for your shell: fix broken commands in as few keys as you can,
+and learn the line-editing shortcuts that make it possible.
 
 Most of us edit commands by holding down the arrow keys and Backspace. Bash
 (and zsh, and anything else built on readline) has had much faster ways to do
 it for decades: jump by words, cut and paste with the kill ring, fix case,
-swap letters, and dig old commands out of history. termgame teaches them as
-short puzzles where every key press counts.
+swap letters, and dig old commands out of history. bashgolf teaches them as
+short puzzles, each with a par.
 
-![termgame demo](assets/demo.gif)
+![bashgolf demo](assets/demo.gif)
 
 ## Install
 
 You need Go 1.24 or newer.
 
 ```sh
-go install github.com/iskaa02/termgame@latest
-termgame
+go install github.com/iskaa02/bashgolf@latest
+bashgolf
 ```
 
 Or build it from a clone:
 
 ```sh
-git clone https://github.com/iskaa02/termgame
-cd termgame
-go build -o termgame .
-./termgame
+git clone https://github.com/iskaa02/bashgolf
+cd bashgolf
+go build -o bashgolf .
+./bashgolf
 ```
 
 ## Game modes
@@ -48,7 +49,7 @@ session only; nothing is saved to disk yet.
 You can jump straight to a mode from the command line:
 
 ```sh
-termgame killring   # or casefix, history, dash, rush, keycheck, sandbox
+bashgolf killring   # or casefix, history, dash, rush, keycheck, sandbox
 ```
 
 ## Alt key not working?

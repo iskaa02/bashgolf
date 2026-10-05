@@ -45,7 +45,7 @@ def run_case(tc):
     start = tc["start"]
     point = start.index(CUR)
     text = start.replace(CUR, "", 1)
-    histfile = os.path.join(tempfile.gettempdir(), "termgame_oracle_history")
+    histfile = os.path.join(tempfile.gettempdir(), "bashgolf_oracle_history")
     with open(histfile, "w") as f:
         f.writelines(h + "\n" for h in tc.get("history") or [])
     pid, fd = pty.fork()

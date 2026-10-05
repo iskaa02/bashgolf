@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iskaa02/termgame/internal/readline"
+	"github.com/iskaa02/bashgolf/internal/readline"
 )
 
 var packIDs = []string{"killring", "casefix", "history"}
@@ -120,14 +120,14 @@ func TestParsAreTight(t *testing.T) {
 	})
 }
 
-// TestSuggest is an authoring aid: TERMGAME_SUGGEST=1 go test -run Suggest -v
+// TestSuggest is an authoring aid: BASHGOLF_SUGGEST=1 go test -run Suggest -v
 // prints a solution for every level: optimal if the exhaustive search
 // finishes, otherwise the best quick guess.
 func TestSuggest(t *testing.T) {
-	if os.Getenv("TERMGAME_SUGGEST") == "" {
-		t.Skip("set TERMGAME_SUGGEST=1")
+	if os.Getenv("BASHGOLF_SUGGEST") == "" {
+		t.Skip("set BASHGOLF_SUGGEST=1")
 	}
-	only := os.Getenv("TERMGAME_LEVEL")
+	only := os.Getenv("BASHGOLF_LEVEL")
 	forEachLevel(t, func(t *testing.T, p *Pack, i int, l Level) {
 		if only != "" && only != l.ID {
 			t.Skip()

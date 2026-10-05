@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/iskaa02/termgame/internal/readline"
+	"github.com/iskaa02/bashgolf/internal/readline"
 )
 
 // Solution is a key sequence that solves a level.

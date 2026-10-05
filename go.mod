@@ -1,4 +1,4 @@
-module github.com/iskaa02/termgame
+module github.com/iskaa02/bashgolf
 
 go 1.24.0
 

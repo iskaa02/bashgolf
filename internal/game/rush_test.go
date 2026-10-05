@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/iskaa02/termgame/internal/readline"
+	"github.com/iskaa02/bashgolf/internal/readline"
 )
 
 func TestRushTasksAreFixable(t *testing.T) {

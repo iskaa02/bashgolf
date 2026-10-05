@@ -7,7 +7,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/iskaa02/termgame/internal/readline"
+	"github.com/iskaa02/bashgolf/internal/readline"
 )
 
 // RushDuration is how long a free Line Rush run lasts.

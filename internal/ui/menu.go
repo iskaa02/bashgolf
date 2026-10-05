@@ -6,12 +6,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/iskaa02/termgame/internal/game"
+	"github.com/iskaa02/bashgolf/internal/game"
 )
 
 const logo = `
- ▀█▀ █▀▀ █▀█ █▀▄▀█ █▀▀ ▄▀█ █▀▄▀█ █▀▀
-  █  ██▄ █▀▄ █ ▀ █ █▄█ █▀█ █ ▀ █ ██▄`
+ ██▄ ▄▀█ █▀ █ █ █▀▀ █▀█ █   █▀▀
+ █▄█ █▀█ ▄█ █▀█ █▄█ █▄█ █▄▄ █▀ `
 
 type menuItem struct {
 	title, desc string

@@ -4,7 +4,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/iskaa02/termgame/internal/game"
+	"github.com/iskaa02/bashgolf/internal/game"
 )
 
 // Screen is one full-screen mode. Screens get every key, including Ctrl+C,

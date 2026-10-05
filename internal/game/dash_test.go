@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iskaa02/termgame/internal/readline"
+	"github.com/iskaa02/bashgolf/internal/readline"
 )
 
 func TestDashLinesFit(t *testing.T) {

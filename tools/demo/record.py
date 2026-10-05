@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Drive termgame in a pty with scripted keys and record an asciicast v2 file.
+"""Drive bashgolf in a pty with scripted keys and record an asciicast v2 file.
 
 Used to make assets/demo.gif:
 
-    go build -o termgame .
-    python3 tools/demo/record.py tools/demo/demo.keys demo.cast ./termgame
+    go build -o bashgolf .
+    python3 tools/demo/record.py tools/demo/demo.keys demo.cast ./bashgolf
     agg --font-size 16 --idle-time-limit 3 --last-frame-duration 3 demo.cast assets/demo.gif
 
 Each line of the keys file is "<delay-seconds> <key> [<key>...]", with keys
@@ -54,8 +54,8 @@ def main():
     pid, fd = pty.fork()
     if pid == 0:
         os.environ.update(TERM="xterm-256color", COLORTERM="truecolor")
-        os.execvp(sys.argv[3] if len(sys.argv) > 3 else "termgame",
-                  [sys.argv[3] if len(sys.argv) > 3 else "termgame"])
+        os.execvp(sys.argv[3] if len(sys.argv) > 3 else "bashgolf",
+                  [sys.argv[3] if len(sys.argv) > 3 else "bashgolf"])
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", ROWS, COLS, 0, 0))
 
     events, t0 = [], time.monotonic()
