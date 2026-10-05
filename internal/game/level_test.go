@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -11,7 +12,7 @@ import (
 	"termgame/internal/readline"
 )
 
-var packIDs = []string{"killring", "casefix"}
+var packIDs = []string{"killring", "casefix", "history"}
 
 func forEachLevel(t *testing.T, fn func(t *testing.T, p *Pack, i int, l Level)) {
 	for _, id := range packIDs {
@@ -37,18 +38,45 @@ func TestLevelSolutions(t *testing.T) {
 		if l.Editor().Text() == l.Target {
 			t.Fatal("already solved at the start")
 		}
-		allowed := p.SolverKeys(i)
+		allowed := append(p.SolverKeys(i), "enter")
 		ed := l.Editor()
-		for _, k := range l.Solution {
-			if !slices.Contains(allowed, k) && !(KeyCost(k) == 1 && len([]rune(k)) == 1 && !l.NoTyping) {
+		typed := ""
+		solved := false
+		for n, k := range l.Solution {
+			text, isTyped := typedText(k)
+			if len([]rune(k)) == 1 {
+				text, isTyped = k, true
+			}
+			switch {
+			case isTyped && l.NoTyping:
+				t.Errorf("solution types %q on a no-typing level", k)
+			case !isTyped && !slices.Contains(allowed, k):
 				t.Errorf("solution uses %q, which the pack hasn't taught yet", k)
 			}
-			if r := Press(ed, k); r.Unbound {
+			typed += text
+			r := Press(ed, k)
+			if r.Unbound {
 				t.Errorf("solution key %q is unbound", k)
 			}
+			if l.Mode == ModeRun && r.Event == readline.EventAccept {
+				ran, ok, err := l.Run(ed)
+				if err != nil || !ok || n != len(l.Solution)-1 {
+					t.Errorf("after key %d the solution runs %q (err %v), want to finish by running %q", n+1, ran, err, l.Target)
+				}
+				solved = ok
+			}
 		}
-		if ed.Text() != l.Target {
-			t.Errorf("solution gives %q, want %q", ed.Text(), l.Target)
+		switch l.Mode {
+		case ModeEdit:
+			if ed.Text() != l.Target {
+				t.Errorf("solution gives %q, want %q", ed.Text(), l.Target)
+			}
+		case ModeRun:
+			if !solved {
+				t.Errorf("solution never runs %q", l.Target)
+			}
+		default:
+			t.Errorf("unknown mode %q", l.Mode)
 		}
 		if c := Cost(l.Solution); c != l.Par {
 			t.Errorf("solution costs %d keys but par is %d", c, l.Par)
@@ -57,7 +85,11 @@ func TestLevelSolutions(t *testing.T) {
 			if KeyInfo[k] == "" {
 				t.Errorf("no KeyInfo for new key %q", k)
 			}
-			if !slices.Contains(l.Solution, k) {
+			if pat, ok := typedPattern[k]; ok {
+				if !regexp.MustCompile(pat).MatchString(typed) {
+					t.Errorf("solution never types %s, which this level teaches", k)
+				}
+			} else if !slices.Contains(l.Solution, k) {
 				t.Errorf("solution never uses %q, the key this level teaches", k)
 			}
 		}
@@ -73,6 +105,10 @@ func TestParsAreTight(t *testing.T) {
 	forEachLevel(t, func(t *testing.T, p *Pack, i int, l Level) {
 		if l.Par <= 1 {
 			return // the start is never solved already, so 1 is unbeatable
+		}
+		if l.Mode == ModeRun {
+			t.Logf("par %d set by hand (run levels are too big to search)", l.Par)
+			return
 		}
 		sol, err := Solve(l.Editor(), l.Target, p.SolverKeys(i), SolveOptions{MaxStates: 1_500_000, MaxCost: l.Par - 1})
 		switch {
@@ -96,6 +132,11 @@ func TestSuggest(t *testing.T) {
 		if only != "" && only != l.ID {
 			t.Skip()
 		}
+		if l.Mode == ModeRun {
+			keys := suggestRun(p, i)
+			t.Logf("recall %d  %s", Cost(keys), quoteKeys(keys))
+			return
+		}
 		kind := "optimal"
 		sol, err := Solve(l.Editor(), l.Target, p.SolverKeys(i), SolveOptions{MaxStates: 1_500_000})
 		for _, w := range []float64{2, 4, 8} {
@@ -109,12 +150,100 @@ func TestSuggest(t *testing.T) {
 			t.Logf("%v", err)
 			return
 		}
-		quoted := make([]string, len(sol.Keys))
-		for i, k := range sol.Keys {
-			quoted[i] = `"` + k + `"`
-		}
-		t.Logf("%s %d  [%s]", kind, sol.Cost, strings.Join(quoted, ", "))
+		t.Logf("%s %d  %s", kind, sol.Cost, quoteKeys(sol.Keys))
 	})
+}
+
+func quoteKeys(keys []string) string {
+	quoted := make([]string, len(keys))
+	for i, k := range keys {
+		quoted[i] = `"` + k + `"`
+	}
+	return "[" + strings.Join(quoted, ", ") + "]"
+}
+
+// suggestRun tries the usual ways to recall a command (only those the pack
+// has taught by level i) and returns the cheapest that runs the target:
+// Ctrl+P n times, Ctrl+R with a substring and repeats, !prefix, !n and !-n.
+// It doesn't try editing, so levels that change the command need a
+// hand-made solution.
+func suggestRun(p *Pack, i int) []string {
+	l := p.Levels[i]
+	taught := map[string]bool{}
+	for _, k := range p.SolverKeys(i) {
+		taught[k] = true
+	}
+	for _, lv := range p.Levels[:i+1] {
+		for _, k := range lv.New {
+			taught[k] = true
+		}
+	}
+	// !n needs the command's number, which players only know when the
+	// mission tells them, so it's only tried on the level that teaches it.
+	numbers := slices.Contains(l.New, "!n")
+	var cands [][]string
+	for n := 1; n <= len(l.History); n++ {
+		keys := slices.Repeat([]string{"ctrl+p"}, n)
+		cands = append(cands, append(keys, "enter"))
+		if numbers {
+			cands = append(cands, []string{fmt.Sprintf("'!%d'", len(l.History)-n+1), "enter"})
+			cands = append(cands, []string{fmt.Sprintf("'!-%d'", n), "enter"})
+		}
+	}
+	target := []rune(l.Target)
+	for a := 0; a < len(target); a++ {
+		for b := a + 1; b <= min(len(target), a+6); b++ {
+			sub := string(target[a:b])
+			if strings.ContainsAny(sub, "'") {
+				continue
+			}
+			for repeat := 0; repeat <= 3; repeat++ {
+				keys := []string{"ctrl+r", "'" + sub + "'"}
+				keys = append(keys, slices.Repeat([]string{"ctrl+r"}, repeat)...)
+				cands = append(cands, append(keys, "enter"))
+			}
+			if a == 0 {
+				cands = append(cands, []string{"'!" + sub + "'", "enter"})
+			}
+		}
+	}
+	uses := func(keys []string) bool {
+		for _, k := range keys {
+			switch text, typed := typedText(k); {
+			case typed && strings.HasPrefix(text, "!") && len(text) > 1 && text[1] >= '0' && text[1] <= '9':
+				if !taught["!n"] {
+					return false
+				}
+			case typed && strings.HasPrefix(text, "!-"):
+				if !taught["!n"] {
+					return false
+				}
+			case typed && strings.HasPrefix(text, "!"):
+				if !taught["!string"] {
+					return false
+				}
+			case !typed && k != "enter" && !taught[k]:
+				return false
+			}
+		}
+		return true
+	}
+	var best []string
+	for _, keys := range cands {
+		if best != nil && Cost(keys) >= Cost(best) || !uses(keys) {
+			continue
+		}
+		ed := l.Editor()
+		for _, k := range keys {
+			if Press(ed, k).Event == readline.EventAccept {
+				if _, ok, _ := l.Run(ed); ok {
+					best = keys
+				}
+				break
+			}
+		}
+	}
+	return best
 }
 
 func TestSolveFindsOptimal(t *testing.T) {

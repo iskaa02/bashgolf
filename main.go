@@ -5,7 +5,9 @@
 //	termgame sandbox    jump straight to the sandbox
 //	termgame killring   jump straight to Kill Ring Surgeon
 //	termgame casefix    jump straight to Case Fixer
+//	termgame history    jump straight to History Detective
 //	termgame dash       jump straight to Cursor Dash
+//	termgame rush       jump straight to Line Rush
 package main
 
 import (

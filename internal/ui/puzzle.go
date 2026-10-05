@@ -41,10 +41,13 @@ type puzzle struct {
 	improved bool
 	width    int
 
+	output []string // run mode: what the fake terminal printed
+
 	// Hint ghost: replays the par solution one key per tick.
 	ghostRun  int // bumps on every (re)start so stale ticks are ignored
 	ghostEd   *readline.Editor
 	ghostStep int
+	ghostRan  string
 }
 
 func newPuzzle(pack *game.Pack, prog *game.Progress, idx int) *puzzle {
@@ -59,6 +62,7 @@ func (m *puzzle) restart() {
 	m.trail = nil
 	m.flash = ""
 	m.phase = playing
+	m.output = nil
 	m.ghostEd = nil
 	m.ghostRun++
 }
@@ -83,6 +87,10 @@ func (m *puzzle) updatePlaying(msg tea.KeyMsg) (Screen, tea.Cmd) {
 	if m.ed.Pending() == "" {
 		switch name {
 		case "esc":
+			if m.ed.Search().Active {
+				m.ed.Feed(readline.Key{Name: "ctrl+g"}) // like bash, Esc ends the search
+				return m, nil
+			}
 			return m, switchTo(newLevelSelect(m.pack, m.prog, m.idx))
 		case "ctrl+c":
 			m.restart()
@@ -97,16 +105,18 @@ func (m *puzzle) updatePlaying(msg tea.KeyMsg) (Screen, tea.Cmd) {
 		return m, nil
 	}
 	m.flash = ""
-	if msg.Paste {
-		m.keys += len(msg.Runes)
+	// Fast typing and pastes can deliver several characters in one event;
+	// each character is still a keypress.
+	if k.Text != "" {
+		m.keys += len([]rune(k.Text))
 	} else {
 		m.keys++
 	}
 
 	r := m.ed.Feed(k)
 	label := prettyKey(name)
-	if k.Text == " " {
-		label = "␣"
+	if k.Text != "" {
+		label = strings.ReplaceAll(k.Text, " ", "␣")
 	}
 	switch {
 	case r.Unbound:
@@ -119,16 +129,54 @@ func (m *puzzle) updatePlaying(msg tea.KeyMsg) (Screen, tea.Cmd) {
 	switch {
 	case r.Event == readline.EventEOF:
 		m.flash = "Ctrl+D on an empty line would close a real shell! Ctrl+C restarts the level."
+	case r.Event == readline.EventAccept && m.level.Mode == game.ModeRun:
+		m.run()
+		return m, nil
 	case r.Event == readline.EventAccept:
 		m.flash = "Not yet: the line has to match the goal exactly."
 	}
 
-	if m.ed.Text() == m.level.Target {
-		m.phase = solved
-		m.stars = game.Stars(m.keys, m.level.Par)
-		m.improved = m.prog.Record(m.pack, m.idx, m.keys)
+	if m.level.Mode == game.ModeEdit && m.ed.Text() == m.level.Target {
+		m.solve()
 	}
 	return m, nil
+}
+
+func (m *puzzle) solve() {
+	m.phase = solved
+	m.stars = game.Stars(m.keys, m.level.Par)
+	m.improved = m.prog.Record(m.pack, m.idx, m.keys)
+}
+
+// run handles Enter in run mode, printing to the fake terminal like bash.
+func (m *puzzle) run() {
+	line := m.ed.Text()
+	n := len(m.ed.History()) + 1
+	ran, ok, err := m.level.Run(m.ed)
+	switch {
+	case err != nil:
+		m.print("$ "+line, badStyle.Render("bash: "+err.Error()))
+	case ok:
+		m.print("$ " + ran)
+		m.solve()
+	case ran == "history":
+		m.print("$ " + ran)
+		h := m.ed.History()
+		for i := max(0, len(h)-12); i < len(h); i++ {
+			m.print(dimStyle.Render(fmt.Sprintf("%5d  %s", i+1, h[i])))
+		}
+	case strings.TrimSpace(ran) == "":
+		m.print("$")
+	default:
+		m.print("$ "+ran, dimStyle.Render(fmt.Sprintf("(ran as command %d, but it's not the one you're after)", n)))
+	}
+}
+
+func (m *puzzle) print(lines ...string) {
+	m.output = append(m.output, lines...)
+	if len(m.output) > 14 {
+		m.output = m.output[len(m.output)-14:]
+	}
 }
 
 func (m *puzzle) updateSolved(msg tea.KeyMsg) (Screen, tea.Cmd) {
@@ -152,6 +200,7 @@ func (m *puzzle) ghostStart() tea.Cmd {
 	m.ghostRun++
 	m.ghostEd = m.level.Editor()
 	m.ghostStep = 0
+	m.ghostRan = ""
 	run := m.ghostRun
 	return tea.Tick(ghostDelay, func(time.Time) tea.Msg { return ghostTick{run} })
 }
@@ -160,7 +209,9 @@ func (m *puzzle) ghostAdvance(t ghostTick) tea.Cmd {
 	if t.run != m.ghostRun || m.ghostEd == nil || m.ghostStep >= len(m.level.Solution) {
 		return nil
 	}
-	game.Press(m.ghostEd, m.level.Solution[m.ghostStep])
+	if game.Press(m.ghostEd, m.level.Solution[m.ghostStep]).Event == readline.EventAccept && m.level.Mode == game.ModeRun {
+		m.ghostRan, _, _ = m.level.Run(m.ghostEd)
+	}
 	m.ghostStep++
 	if m.ghostStep >= len(m.level.Solution) {
 		return nil
@@ -220,6 +271,9 @@ func (m *puzzle) View() string {
 		dimStyle.Render(fmt.Sprintf("  level %d/%d  ", m.idx+1, len(m.pack.Levels))) +
 		headingStyle.Render(l.Title)
 	sections = append(sections, header, "")
+	if l.Brief != "" {
+		sections = append(sections, textStyle.Render("Mission: ")+keyStyle.Render(l.Brief), "")
+	}
 
 	for _, k := range l.New {
 		sections = append(sections, okStyle.Render("NEW ")+keyStyle.Render(prettyKey(k))+"  "+textStyle.Render(game.KeyInfo[k]))
@@ -233,16 +287,20 @@ func (m *puzzle) View() string {
 	}
 	sections = append(sections, "")
 
-	cur, goal := []rune(m.ed.Text()), []rune(l.Target)
-	clo, chi := diffRange(cur, goal)
-	glo, ghi := diffRange(goal, cur)
-	point := m.ed.Point()
-	if m.phase == solved {
-		point = -1
+	if l.Mode == game.ModeRun {
+		sections = append(sections, m.runView()...)
+	} else {
+		cur, goal := []rune(m.ed.Text()), []rune(l.Target)
+		clo, chi := diffRange(cur, goal)
+		glo, ghi := diffRange(goal, cur)
+		point := m.ed.Point()
+		if m.phase == solved {
+			point = -1
+		}
+		lines := dimStyle.Render("now   ") + okStyle.Render("$ ") + renderEdit(cur, point, clo, chi, wrongStyle) + "\n" +
+			dimStyle.Render("goal  ") + okStyle.Render("$ ") + renderEdit(goal, -1, glo, ghi, missingStyle)
+		sections = append(sections, panelStyle.Render(lines))
 	}
-	lines := dimStyle.Render("now   ") + okStyle.Render("$ ") + renderEdit(cur, point, clo, chi, wrongStyle) + "\n" +
-		dimStyle.Render("goal  ") + okStyle.Render("$ ") + renderEdit(goal, -1, glo, ghi, missingStyle)
-	sections = append(sections, panelStyle.Render(lines))
 
 	score := fmt.Sprintf("keys %d", m.keys)
 	switch {
@@ -282,6 +340,48 @@ func (m *puzzle) View() string {
 	return lipgloss.NewStyle().Padding(1, 2).Render(lipgloss.JoinVertical(lipgloss.Left, sections...))
 }
 
+// runView draws run mode: recent history, a fake terminal with the prompt
+// (or the search prompt), what the line will expand to, and the goal.
+func (m *puzzle) runView() []string {
+	var term []string
+	h := m.ed.History()
+	if len(m.output) == 0 {
+		for i := max(0, len(h)-5); i < len(h); i++ {
+			term = append(term, dimStyle.Render(fmt.Sprintf("%5d  %s", i+1, h[i])))
+		}
+		term = append(term, dimStyle.Render("       (recent history)"))
+	}
+	term = append(term, m.output...)
+
+	if m.phase != solved {
+		text := []rune(m.ed.Text())
+		prompt := okStyle.Render("$ ")
+		if s := m.ed.Search(); s.Active {
+			label := "reverse-i-search"
+			if s.Forward {
+				label = "i-search"
+			}
+			if s.Failed {
+				label = "failed " + label
+			}
+			prompt = keyStyle.Render(fmt.Sprintf("(%s)`%s': ", label, s.Query))
+		}
+		term = append(term, prompt+renderEdit(text, m.ed.Point(), 0, 0, textStyle))
+		line := m.ed.Text()
+		if !m.ed.Search().Active && (strings.Contains(line, "!") || strings.HasPrefix(line, "^")) {
+			if x, err := readline.Expand(line, h); err == nil && x != line {
+				term = append(term, dimStyle.Render("  ↳ Enter runs: ")+textStyle.Render(x))
+			} else if err != nil {
+				term = append(term, dimStyle.Render("  ↳ ")+badStyle.Render(err.Error()))
+			}
+		}
+	}
+	return []string{
+		panelStyle.Render(strings.Join(term, "\n")),
+		dimStyle.Render("goal  run ") + okStyle.Render("$ ") + textStyle.Render(m.level.Target),
+	}
+}
+
 func (m *puzzle) solvedView() string {
 	l := m.level
 	var b strings.Builder
@@ -311,7 +411,9 @@ func (m *puzzle) solvedView() string {
 		}
 	}
 	b.WriteString(dimStyle.Render("par route  ") + strings.Join(route, " ") + "\n")
-	if m.ghostEd != nil {
+	if m.ghostEd != nil && m.ghostRan != "" {
+		b.WriteString(dimStyle.Render("ghost      ") + okStyle.Render("ran ") + textStyle.Render(m.ghostRan) + "\n")
+	} else if m.ghostEd != nil {
 		g := []rune(m.ghostEd.Text())
 		b.WriteString(dimStyle.Render("ghost      ") + okStyle.Render("$ ") + renderEdit(g, m.ghostEd.Point(), 0, 0, textStyle) + "\n")
 	}

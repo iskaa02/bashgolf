@@ -1,10 +1,11 @@
 package readline
 
 import (
-	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // Key is one keypress. Name is the Bubble Tea spelling ("ctrl+w", "alt+.",
@@ -60,6 +61,9 @@ type Editor struct {
 	saved   []rune // the line being typed, kept while browsing history
 
 	prefix string // pending chord prefix, e.g. "ctrl+x"
+
+	search     isearch
+	lastSearch []rune // what Ctrl+R Ctrl+R searches for again
 }
 
 // New returns an editor holding text with the cursor at point.
@@ -79,6 +83,7 @@ func (e *Editor) Reset(text string, point int) {
 	e.histPos = len(e.history)
 	e.saved = nil
 	e.prefix = ""
+	e.search = isearch{}
 }
 
 // SetKillRing replaces the kill ring, oldest entry first. Ctrl+Y will paste
@@ -112,6 +117,10 @@ func (e *Editor) Clone() *Editor {
 	c.undo = slices.Clone(e.undo)
 	c.history = slices.Clone(e.history)
 	c.saved = slices.Clone(e.saved)
+	c.lastSearch = slices.Clone(e.lastSearch)
+	c.search.query = slices.Clone(e.search.query)
+	c.search.lines = slices.Clone(e.search.lines)
+	c.search.origBuf = slices.Clone(e.search.origBuf)
 	c.kills.entries = make([][]rune, len(e.kills.entries))
 	for i, k := range e.kills.entries {
 		c.kills.entries[i] = slices.Clone(k)
@@ -127,30 +136,65 @@ func (e *Editor) Clone() *Editor {
 // entry Ctrl+Y would paste matters. Likewise mark=false if it never
 // presses Ctrl+X Ctrl+X. Leaving those out shrinks the search a lot.
 func (e *Editor) Fingerprint(wholeRing, mark bool) string {
-	var b strings.Builder
-	b.WriteString(string(e.buf))
-	fmt.Fprintf(&b, "\x00%d\x00%s", e.point, e.prefix)
+	// This runs for every state a solver visits, so it avoids fmt and
+	// temporary strings.
+	b := make([]byte, 0, 4*len(e.buf)+48)
+	runes := func(rs []rune) {
+		for _, r := range rs {
+			b = utf8.AppendRune(b, r)
+		}
+	}
+	num := func(n int) { b = strconv.AppendInt(b, int64(n), 10) }
+
+	runes(e.buf)
+	b = append(b, 0)
+	num(e.point)
+	b = append(b, 0)
+	b = append(b, e.prefix...)
+	b = append(b, e.search.fingerprint()...)
 	if mark {
-		fmt.Fprintf(&b, "\x00m%d", e.mark)
+		b = append(b, 0, 'm')
+		num(e.mark)
 	}
 	if wholeRing {
-		fmt.Fprintf(&b, "\x00%d", e.kills.idx)
+		b = append(b, 0)
+		num(e.kills.idx)
 		for _, k := range e.kills.entries {
-			b.WriteString("\x01" + string(k))
+			b = append(b, 1)
+			runes(k)
 		}
 	} else {
-		b.WriteString("\x01" + string(e.kills.current()))
+		b = append(b, 1)
+		runes(e.kills.current())
 	}
 	switch {
 	case isKill(e.last):
-		b.WriteString("\x00kill")
+		b = append(b, "\x00kill"...)
 	case wholeRing && (e.last == ActYank || e.last == ActYankPop):
-		fmt.Fprintf(&b, "\x00yank%d,%d", e.yankStart, e.yankEnd)
+		b = append(b, "\x00yank"...)
+		num(e.yankStart)
+		b = append(b, ',')
+		num(e.yankEnd)
 	case e.last == ActYankLastArg:
-		fmt.Fprintf(&b, "\x00lastarg%d,%d,%d", e.yankStart, e.yankEnd, e.lastArgCount)
+		b = append(b, "\x00lastarg"...)
+		num(e.yankStart)
+		b = append(b, ',')
+		num(e.yankEnd)
+		b = append(b, ',')
+		num(e.lastArgCount)
 	}
-	return b.String()
+	return string(b)
 }
+
+// TextIs reports whether the line is exactly s, without allocating.
+func (e *Editor) TextIs(s []rune) bool { return slices.Equal(e.buf, s) }
+
+// Len is the length of the line in runes.
+func (e *Editor) Len() int { return len(e.buf) }
+
+// ForgetUndo drops the undo history. Searches that never press undo use it
+// to keep copies small.
+func (e *Editor) ForgetUndo() { e.undo = nil }
 
 // Submit returns the current line, records it in history (unless blank) and
 // starts a new empty line, like pressing Enter in bash.
@@ -165,6 +209,11 @@ func (e *Editor) Submit() string {
 
 // Feed processes one keypress.
 func (e *Editor) Feed(k Key) Result {
+	if e.search.active {
+		if r, done := e.feedSearch(k); done {
+			return r
+		}
+	}
 	if e.prefix != "" {
 		chord := prefixKeymaps[e.prefix]
 		e.prefix = ""
@@ -355,6 +404,11 @@ func (e *Editor) run(a Action, text string) Event {
 		}
 	case ActYankLastArg:
 		return e.yankLastArg()
+
+	case ActReverseSearch:
+		e.startSearch(false)
+	case ActForwardSearch:
+		e.startSearch(true)
 
 	case ActAcceptLine:
 		return EventAccept

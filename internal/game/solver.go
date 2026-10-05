@@ -15,9 +15,22 @@ type Solution struct {
 	Cost int      // keypresses, counting both halves of a chord
 }
 
+// typedText returns the text of a 'quoted' solution key, which stands for
+// typing that text one character at a time.
+func typedText(key string) (string, bool) {
+	if len(key) >= 3 && key[0] == '\'' && key[len(key)-1] == '\'' {
+		return key[1 : len(key)-1], true
+	}
+	return "", false
+}
+
 // KeyCost is how many keypresses a solver key takes: 2 for a chord like
-// "ctrl+x ctrl+x", otherwise 1 (including typing a space).
+// "ctrl+x ctrl+x", one per character for 'typed text', otherwise 1
+// (including typing a single character such as a space).
 func KeyCost(key string) int {
+	if text, ok := typedText(key); ok {
+		return len([]rune(text))
+	}
 	if len([]rune(key)) == 1 {
 		return 1
 	}
@@ -33,13 +46,19 @@ func Cost(keys []string) int {
 	return n
 }
 
-// Press feeds a solver key (a chord, a key name, or a single character to
-// type) into the editor.
+// Press feeds a solver key (a chord, a key name, a single character or
+// 'typed text') into the editor.
 func Press(ed *readline.Editor, key string) readline.Result {
 	if len([]rune(key)) == 1 {
 		return ed.Feed(readline.Key{Name: key, Text: key})
 	}
 	var r readline.Result
+	if text, ok := typedText(key); ok {
+		for _, c := range text {
+			r = ed.Feed(readline.Key{Name: string(c), Text: string(c)})
+		}
+		return r
+	}
 	for _, part := range strings.Split(key, " ") {
 		r = ed.Feed(readline.Key{Name: part})
 	}
@@ -104,6 +123,7 @@ func Solve(start *readline.Editor, target string, keys []string, opt SolveOption
 	mark := slices.Contains(keys, "ctrl+x ctrl+x")
 	fingerprint := func(ed *readline.Editor) string { return ed.Fingerprint(wholeRing, mark) }
 	goal := []rune(target)
+	keepUndo := slices.Contains(keys, "ctrl+_") || slices.Contains(keys, "alt+r")
 	priority := func(ed *readline.Editor, g int) float64 {
 		if opt.Weight == 0 {
 			return float64(g)
@@ -116,7 +136,7 @@ func Solve(start *readline.Editor, target string, keys []string, opt SolveOption
 	seq := 0
 	for q.Len() > 0 {
 		n := heap.Pop(q).(*node)
-		if n.ed.Text() == target {
+		if n.ed.TextIs(goal) {
 			return n.solution(), nil
 		}
 		if g, seen := best[fingerprint(n.ed)]; seen && g < n.g {
@@ -131,8 +151,11 @@ func Solve(start *readline.Editor, target string, keys []string, opt SolveOption
 			if r := Press(ed, k); r.Unbound || r.Event == readline.EventDing {
 				continue
 			}
-			if len([]rune(ed.Text())) > maxLen {
+			if ed.Len() > maxLen {
 				continue
+			}
+			if !keepUndo {
+				ed.ForgetUndo()
 			}
 			fp := fingerprint(ed)
 			if old, seen := best[fp]; seen && old <= g {

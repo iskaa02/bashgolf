@@ -43,6 +43,8 @@ const (
 	ActPreviousHistory
 	ActNextHistory
 	ActYankLastArg
+	ActReverseSearch
+	ActForwardSearch
 
 	ActAcceptLine
 )
@@ -77,6 +79,8 @@ var actionNames = map[Action]string{
 	ActPreviousHistory:      "previous-history",
 	ActNextHistory:          "next-history",
 	ActYankLastArg:          "yank-last-arg",
+	ActReverseSearch:        "reverse-search-history",
+	ActForwardSearch:        "forward-search-history",
 	ActAcceptLine:           "accept-line",
 }
 
@@ -139,6 +143,8 @@ var Keymap = map[string]Action{
 	"down":   ActNextHistory,
 	"alt+.":  ActYankLastArg,
 	"alt+_":  ActYankLastArg,
+	"ctrl+r": ActReverseSearch,
+	"ctrl+s": ActForwardSearch,
 
 	"enter":  ActAcceptLine,
 	"ctrl+j": ActAcceptLine,

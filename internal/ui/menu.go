@@ -21,6 +21,7 @@ type menuItem struct {
 var (
 	killRingPack = game.MustLoadPack("killring")
 	caseFixPack  = game.MustLoadPack("casefix")
+	historyPack  = game.MustLoadPack("history")
 )
 
 type menu struct {
@@ -33,7 +34,9 @@ func newMenu(prog *game.Progress) *menu {
 	return &menu{items: []menuItem{
 		{"Kill Ring Surgeon", "fix broken commands by cutting and pasting", func() Screen { return newLevelSelect(killRingPack, prog, 0) }},
 		{"Case Fixer", "Caps Lock accidents and swapped letters", func() Screen { return newLevelSelect(caseFixPack, prog, 0) }},
-		{"Cursor Dash", "60 seconds, hit the targets in as few keys as you can", func() Screen { return newDash(prog) }},
+		{"History Detective", "rerun old commands with Ctrl+R, !! and friends", func() Screen { return newLevelSelect(historyPack, prog, 0) }},
+		{"Cursor Dash", "race the cursor to targets: free run or levels", func() Screen { return newDash(prog) }},
+		{"Line Rush", "fix broken commands against the clock: free run or levels", func() Screen { return newRush(prog) }},
 		{"Key Check", "see which shortcuts your terminal sends", func() Screen { return newKeyCheck() }},
 		{"Sandbox", "a fake shell line to practise every shortcut", func() Screen { return newSandbox() }},
 	}}

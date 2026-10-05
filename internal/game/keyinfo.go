@@ -25,6 +25,29 @@ var KeyInfo = map[string]string{
 	"alt+c":         "Capitalize the word",
 	"ctrl+t":        "swap the two characters around the cursor",
 	"alt+t":         "swap the two words around the cursor",
+	"ctrl+p":        "previous command in history (same as ↑)",
+	"ctrl+n":        "next command in history (same as ↓)",
+	"ctrl+r":        "search back through history as you type; Ctrl+R again for older matches",
+	"ctrl+s":        "search forward through history (the other way from Ctrl+R)",
+	"ctrl+g":        "give up on a search and get your line back",
+	"alt+.":         "insert the last argument of the previous command",
+
+	// History expansion: typed text that bash rewrites when you press Enter.
+	"!!":       "the whole previous command, e.g. sudo !!",
+	"!$":       "the last argument of the previous command",
+	"!string":  "the latest command starting with string, e.g. !vim",
+	"!n":       "command number n from `history`, e.g. !42",
+	"^old^new": "rerun the previous command with old replaced by new",
+}
+
+// typedPattern says what a history-expansion "key" looks like in typed
+// text, so tests can check a level's solution really uses it.
+var typedPattern = map[string]string{
+	"!!":       `!!`,
+	"!$":       `!\$`,
+	"!string":  `![A-Za-z]`,
+	"!n":       `![0-9]`,
+	"^old^new": `^\^[^^]+\^`,
 }
 
 // baseKeys are always available to the par solver: the basic moves anyone

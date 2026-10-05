@@ -18,7 +18,13 @@ const CursorMark = "‸"
 //go:embed packs/*.json
 var packFiles embed.FS
 
-// Level is one puzzle: turn Start into Target.
+// Level modes.
+const (
+	ModeEdit = ""    // make the line match Target
+	ModeRun  = "run" // run (press Enter on) a command that expands to Target
+)
+
+// Level is one puzzle: turn Start into Target, or in run mode, run Target.
 type Level struct {
 	ID       string   `json:"id"`
 	Title    string   `json:"title"`
@@ -28,20 +34,25 @@ type Level struct {
 	Tip      string   `json:"tip"`
 	NoTyping bool     `json:"noTyping"` // forbid typing: shortcuts only
 	Kills    []string `json:"kills"`    // kill ring at the start, oldest first
+	Mode     string   `json:"mode"`
+	Brief    string   `json:"brief"`   // run mode: the mission, in words
+	History  []string `json:"history"` // added after the pack's history
 
 	// Par and Solution are the target score and the route the hint ghost
-	// replays. Tests check the solution works and try to beat the par.
+	// replays. Tests check the solution works and, for edit levels, try to
+	// beat the par. A 'quoted' solution entry means typing that text.
 	Par      int      `json:"par"`
 	Solution []string `json:"solution"`
 }
 
 // Pack is an ordered set of levels for one game mode.
 type Pack struct {
-	ID     string   `json:"id"`
-	Title  string   `json:"title"`
-	Desc   string   `json:"desc"`
-	Known  []string `json:"known"` // shortcuts taught by earlier packs
-	Levels []Level  `json:"levels"`
+	ID      string   `json:"id"`
+	Title   string   `json:"title"`
+	Desc    string   `json:"desc"`
+	Known   []string `json:"known"`   // shortcuts taught by earlier packs
+	History []string `json:"history"` // shell history every level starts with
+	Levels  []Level  `json:"levels"`
 }
 
 // LoadPack reads an embedded pack by id, e.g. "killring".
@@ -54,10 +65,11 @@ func LoadPack(id string) (*Pack, error) {
 	if err := json.Unmarshal(data, &p); err != nil {
 		return nil, fmt.Errorf("pack %s: %w", id, err)
 	}
-	for _, l := range p.Levels {
+	for i, l := range p.Levels {
 		if strings.Count(l.Start, CursorMark) != 1 {
 			return nil, fmt.Errorf("pack %s level %s: start needs exactly one %s", id, l.ID, CursorMark)
 		}
+		p.Levels[i].History = append(slices.Clone(p.History), l.History...)
 	}
 	return &p, nil
 }
@@ -77,7 +89,22 @@ func (l Level) Editor() *readline.Editor {
 	text := strings.Replace(l.Start, CursorMark, "", 1)
 	ed := readline.New(text, len([]rune(l.Start[:i])))
 	ed.SetKillRing(l.Kills)
+	ed.SetHistory(l.History)
 	return ed
+}
+
+// Run is what pressing Enter does in run mode: expand the line against the
+// history like bash, check it against the target, and record it in the
+// history (as bash does, whether or not it was the right command).
+func (l Level) Run(ed *readline.Editor) (ran string, solved bool, err error) {
+	ran, err = readline.Expand(ed.Text(), ed.History())
+	if err != nil {
+		ed.Reset("", 0)
+		return "", false, err
+	}
+	ed.Reset(ran, len([]rune(ran)))
+	ed.Submit()
+	return ran, ran == l.Target, nil
 }
 
 // SolverKeys is what the par solver may press on level i: the base keys,

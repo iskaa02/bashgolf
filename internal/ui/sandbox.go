@@ -48,6 +48,10 @@ func (m *sandbox) Update(msg tea.Msg) (Screen, tea.Cmd) {
 			// Keys bash handles outside readline.
 			switch name {
 			case "esc":
+				if m.ed.Search().Active {
+					m.ed.Feed(readline.Key{Name: "ctrl+g"})
+					return m, nil
+				}
 				return m, back
 			case "ctrl+c":
 				m.print("$ " + m.ed.Text() + "^C")
@@ -62,9 +66,6 @@ func (m *sandbox) Update(msg tea.Msg) (Screen, tea.Cmd) {
 				m.flash = "Ctrl+Z suspends a running program (bring it back with fg). Nothing is running at an empty prompt."
 				m.record(name, "suspend (SIGTSTP)")
 				return m, nil
-			case "ctrl+r", "ctrl+s", "ctrl+g":
-				m.flash = "History search arrives with the History Detective mode."
-				return m, nil
 			}
 		}
 
@@ -76,10 +77,20 @@ func (m *sandbox) Update(msg tea.Msg) (Screen, tea.Cmd) {
 		case r.Pending:
 			m.flash = prettyKey(name) + " … waiting for the second key"
 		case r.Event == readline.EventAccept:
-			line := m.ed.Submit()
-			m.print("$ " + line)
-			if strings.TrimSpace(line) != "" {
-				m.print(dimStyle.Render("(sandbox: commands don't really run)"))
+			line := m.ed.Text()
+			ran, err := readline.Expand(line, m.ed.History())
+			if err != nil {
+				m.ed.Reset("", 0)
+				m.print("$ "+line, badStyle.Render("bash: "+err.Error()))
+			} else {
+				m.ed.Reset(ran, len([]rune(ran)))
+				m.ed.Submit()
+				m.print("$ " + ran)
+				if ran != line {
+					m.print(dimStyle.Render("(history expansion: you typed " + line + ")"))
+				} else if strings.TrimSpace(ran) != "" {
+					m.print(dimStyle.Render("(sandbox: commands don't really run)"))
+				}
 			}
 			m.record(name, "accept-line")
 		case r.Event == readline.EventEOF:
@@ -99,8 +110,8 @@ func (m *sandbox) Update(msg tea.Msg) (Screen, tea.Cmd) {
 	return m, nil
 }
 
-func (m *sandbox) print(s string) {
-	m.scroll = append(m.scroll, s)
+func (m *sandbox) print(lines ...string) {
+	m.scroll = append(m.scroll, lines...)
 	if len(m.scroll) > 8 {
 		m.scroll = m.scroll[len(m.scroll)-8:]
 	}
@@ -126,9 +137,22 @@ func (m *sandbox) renderLine() string {
 		at = string(rs[p])
 	}
 	prompt := okStyle.Render("$ ")
+	if s := m.ed.Search(); s.Active {
+		label := "reverse-i-search"
+		if s.Forward {
+			label = "i-search"
+		}
+		if s.Failed {
+			label = "failed " + label
+		}
+		prompt = keyStyle.Render(fmt.Sprintf("(%s)`%s': ", label, s.Query))
+	}
 	line := prompt + textStyle.Render(string(rs[:p])) + cursorStyle.Render(at)
 	if p < len(rs) {
 		line += textStyle.Render(string(rs[p+1:]))
+	}
+	if m.ed.Search().Active {
+		return line + "\n" + dimStyle.Render("  type to search · Ctrl+R older · Ctrl+S newer · Ctrl+G cancel")
 	}
 	mark := min(m.ed.Mark(), len(rs))
 	markLine := strings.Repeat(" ", 2+mark) + dimStyle.Render("^ mark (Ctrl+X Ctrl+X jumps here)")
