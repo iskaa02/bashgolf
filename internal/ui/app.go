@@ -14,6 +14,16 @@ type Screen interface {
 	View() string
 }
 
+// initer is a Screen with work to start when it is shown, like an animation.
+type initer interface{ Init() tea.Cmd }
+
+func initScreen(s Screen) tea.Cmd {
+	if i, ok := s.(initer); ok {
+		return i.Init()
+	}
+	return nil
+}
+
 type (
 	switchMsg struct{ to Screen }
 	backMsg   struct{}
@@ -54,7 +64,7 @@ func NewApp(start string) App {
 	return a
 }
 
-func (a App) Init() tea.Cmd { return nil }
+func (a App) Init() tea.Cmd { return initScreen(a.screen) }
 
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -62,10 +72,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.width, a.height = msg.Width, msg.Height
 	case switchMsg:
 		a.screen = msg.to
-		return a, func() tea.Msg { return tea.WindowSizeMsg{Width: a.width, Height: a.height} }
+		size := func() tea.Msg { return tea.WindowSizeMsg{Width: a.width, Height: a.height} }
+		return a, tea.Batch(size, initScreen(a.screen))
 	case backMsg:
 		a.screen = newMenu(a.prog)
-		return a, nil
+		return a, initScreen(a.screen)
 	}
 	var cmd tea.Cmd
 	a.screen, cmd = a.screen.Update(msg)
