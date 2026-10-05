@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"termgame/internal/readline"
+	"github.com/iskaa02/termgame/internal/readline"
 )
 
 // Solution is a key sequence that solves a level.

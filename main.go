@@ -16,7 +16,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termgame/internal/ui"
+	"github.com/iskaa02/termgame/internal/ui"
 )
 
 func main() {

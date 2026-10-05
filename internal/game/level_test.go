@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"termgame/internal/readline"
+	"github.com/iskaa02/termgame/internal/readline"
 )
 
 var packIDs = []string{"killring", "casefix", "history"}

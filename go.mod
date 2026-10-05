@@ -1,4 +1,4 @@
-module termgame
+module github.com/iskaa02/termgame
 
 go 1.24.0
 

@@ -8,8 +8,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"termgame/internal/game"
-	"termgame/internal/readline"
+	"github.com/iskaa02/termgame/internal/game"
+	"github.com/iskaa02/termgame/internal/readline"
 )
 
 type puzzlePhase int

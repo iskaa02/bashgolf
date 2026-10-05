@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"termgame/internal/readline"
+	"github.com/iskaa02/termgame/internal/readline"
 )
 
 // CursorMark marks the starting cursor position in level text.

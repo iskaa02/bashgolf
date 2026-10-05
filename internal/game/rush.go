@@ -7,7 +7,7 @@ import (
 	"time"
 	"unicode"
 
-	"termgame/internal/readline"
+	"github.com/iskaa02/termgame/internal/readline"
 )
 
 // RushDuration is how long a free Line Rush run lasts.

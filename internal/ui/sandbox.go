@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"termgame/internal/readline"
+	"github.com/iskaa02/termgame/internal/readline"
 )
 
 var sandboxHistory = []string{

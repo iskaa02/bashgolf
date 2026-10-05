@@ -5,7 +5,7 @@ import (
 	"slices"
 	"time"
 
-	"termgame/internal/readline"
+	"github.com/iskaa02/termgame/internal/readline"
 )
 
 // DashDuration is how long a free Cursor Dash run lasts.

@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"termgame/internal/game"
+	"github.com/iskaa02/termgame/internal/game"
 )
 
 type dashPhase int
